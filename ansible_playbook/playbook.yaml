@@ -1,0 +1,116 @@
+---
+- name: Deploy a Kubernetes Cluster and a simple "Hello world" application on "kind"
+  hosts: all
+  become: true
+  vars:
+   kind_cluster_name: "orange-services-interview"
+   helm_release_name: "orange-services-v1"
+  tasks:
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+
+    - name: Install curl
+      apt:
+        name: curl
+        state: present  # Ensures curl is installed
+      
+    - name: Check if Docker is installed
+      command: docker --version
+      ignore_errors: yes
+      register: docker_installed
+
+    - name: Install Docker Engine using convenience script
+      script: ../deployment_utilities/docker_install.sh
+      when: docker_installed.rc != 0
+
+    - name: Check if Kind is installed
+      command: kind --version
+      ignore_errors: yes
+      register: kind_installed
+      
+    - name: Install Kind using convenience script
+      script: ../deployment_utilities/kind_install.sh
+      when: kind_installed.rc != 0
+
+    - name: Check if Kubectl is installed
+      command: kubectl version --client=true
+      ignore_errors: yes
+      register: kubectl_installed
+
+    - name: Install kubectl using convenience script
+      script: ../deployment_utilities/kubectl_install.sh
+      when: kubectl_installed.rc != 0
+    
+    - name: Check if Helm is installed
+      command: helm version --short
+      ignore_errors: yes
+      register: helm_installed
+
+    - name: Install helm using convenience script
+      script: ../deployment_utilities/helm_install.sh
+      when: helm_installed.rc != 0
+     
+    - name: Copy kind config file
+      copy:
+        src: ../deployment_utilities/kind-config.yaml  # Specify the source file path
+        dest: /tmp/kind-config.yaml  # Specify the destination path on the host
+      
+    - name: Check if kind cluster is deployed
+      shell: kind get clusters | grep {{ kind_cluster_name }}
+      ignore_errors: yes
+      register: kind_cluster_deployed
+
+    - name: Deploy Kubernetes cluster with kind
+      command: kind create cluster --name={{ kind_cluster_name }} --config=/tmp/kind-config.yaml
+      when: kind_cluster_deployed.rc != 0
+
+    - name: Check if nginx controller is deployed
+      shell: kubectl get ns | grep -i nginx
+      ignore_errors: yes
+      register: nginx_controller_deployed
+
+    - name: Install NGINX Ingress Controller 
+      command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+      when: nginx_controller_deployed.rc != 0
+
+    - name: Pause for 90 seconds # Wait for the application pods to be up and running
+      pause:
+        seconds: 90
+      when: nginx_controller_deployed.rc != 0
+
+    - name: Check if directory exists
+      stat:
+        path: /opt/helloworld
+      register: dir_check
+
+    - name: Copy helm charts file
+      copy:
+        src: ../helm_charts/helloworld  # Specify the source file path
+        dest: /opt/  # Specify the destination path on the host
+      when: not dir_check.stat.exists
+
+    - name: Check if helm release is existing
+      shell: helm list | grep -o {{ helm_release_name }}
+      ignore_errors: yes
+      register: helm_release_existing
+
+    - name: Install a simple "Hello world" application with Helm, from a local chart
+      command: helm install {{ helm_release_name }} /opt/helloworld
+      when: helm_release_existing.rc != 0
+        
+    - name: Pause for 20 seconds # Wait for the application pods to be up and running
+      pause:
+        seconds: 20
+      when: helm_release_existing.rc != 0
+
+    - name: Map the IP of the cluster to the defined hostname and add it to /etc/hosts
+      script: ../deployment_utilities/hostname_append.sh
+
+    - name: Execute curl command #Check if the application is reachable
+      command: "curl http://orange-services.interview"
+      register: curl_output
+
+    - name: Print curl output #Print the output of the curl command
+      debug:
+        var: curl_output.stdout
