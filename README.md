@@ -39,7 +39,7 @@ The playbook will then run all the tasks and will deploy the "hello world" appli
 ![image](https://github.com/Dragos-Gerea/orange-services-task/assets/74601702/1d2f69c2-61a1-4c12-bc4f-5766c3dc8f2a)
 
 ## **Known issues**
-In some rare scenarios, the `ValidatingWebhookConfiguration` will not get correctly deployed and the Ingress rule of the application will not get created. In this scenario, please run the following commands to delete the `ValidatingWebhookConfiguration` and the `kind cluster`, where `YOUR_CLUSTER_NAME` is the name of your kind cluster where the application is deployed:
+In some rare scenarios, the `ValidatingWebhookConfiguration` will not get correctly deployed and the Ingress object(implying also the rules) of the application will not get created. In this scenario, please run the following commands to delete the `ValidatingWebhookConfiguration` and the `kind cluster`, where `YOUR_CLUSTER_NAME` is the name of your kind cluster where the application is deployed:
 ```
 kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 sudo kind delete cluster --name=YOUR_CLUSTER_NAME
