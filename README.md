@@ -26,7 +26,7 @@ Before running this playbook, ensure that the following prerequisites are met:
 6. **Verifying the output of the application**. After the successful deployment of the application, the playbook is sending a cURL request to the defined hostname and then it prints the output of the request.
 
 ## **Usage**
-  Prior to running the application, please make all the scripts from `deployment_utilities` directory, executable. Then, please modify the `inventory.ini` file from the `ansible_playbook` directory, so that it suits your needs. The `ansible_user` should have superuser privileges on the target host:
+  Prior to running the application, please make all the scripts from `deployment_utilities` directory, executable. Change the curl url from the `Execute curl command` task to your specific URL. Then, please modify the `inventory.ini` file from the `ansible_playbook` directory, so that it suits your needs. The `ansible_user` should have superuser privileges on the target host:
   ```
 [orange_interview]
 host1 ansible_host=YOUR_IP ansible_user=YOUR_USERNAME
